@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd presensi-app && npm run build",
-  "outputDirectory": "presensi-app/dist",
-  "installCommand": "cd presensi-app && npm install",
-  "framework": "vite"
-}
