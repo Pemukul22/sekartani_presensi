@@ -1,0 +1,450 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --ios-bg: #f2f2f7;
+  --ios-surface: #ffffff;
+  --ios-surface-2: #f2f2f7;
+  --ios-surface-grouped: #ffffff;
+  --ios-blue: #007aff;
+  --ios-blue-dark: #0062cc;
+  --ios-green: #34c759;
+  --ios-green-dark: #248a3d;
+  --ios-red: #ff3b30;
+  --ios-orange: #ff9500;
+  --ios-gray: #8e8e93;
+  --ios-gray-2: #aeaeb2;
+  --ios-gray-3: #c7c7cc;
+  --ios-gray-4: #d1d1d6;
+  --ios-gray-5: #e5e5ea;
+  --ios-gray-6: #f2f2f7;
+  --ios-label: #000000;
+  --ios-label-2: #3c3c43;
+  --ios-label-3: rgba(60,60,67,0.6);
+  --ios-separator: rgba(60,60,67,0.29);
+  --ios-fill: rgba(120,120,128,0.2);
+  --ios-fill-2: rgba(120,120,128,0.16);
+  --ios-radius: 12px;
+  --ios-radius-lg: 16px;
+  --ios-radius-xl: 22px;
+  --ios-shadow: 0 2px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  --ios-shadow-sm: 0 1px 6px rgba(0,0,0,0.06);
+}
+
+html, body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--ios-bg);
+  color: var(--ios-label);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === NAVBAR === */
+.ios-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--ios-separator);
+}
+
+.ios-navbar-inner {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ios-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ios-brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.ios-brand-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ios-label);
+  letter-spacing: -0.3px;
+}
+
+.ios-brand-subtitle {
+  font-size: 11px;
+  color: var(--ios-label-3);
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+/* === BUTTONS === */
+.ios-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: opacity 0.15s, transform 0.12s;
+  letter-spacing: -0.1px;
+}
+
+.ios-btn:active {
+  opacity: 0.7;
+  transform: scale(0.97);
+}
+
+.ios-btn-primary {
+  background: var(--ios-blue);
+  color: #fff;
+  border-radius: 14px;
+  padding: 11px 22px;
+  font-size: 15px;
+}
+
+.ios-btn-primary:disabled {
+  background: var(--ios-gray-4);
+  color: var(--ios-gray);
+  cursor: not-allowed;
+  opacity: 1;
+  transform: none;
+}
+
+.ios-btn-success {
+  background: var(--ios-green);
+  color: #fff;
+  border-radius: 14px;
+  padding: 11px 22px;
+  font-size: 15px;
+}
+
+.ios-btn-ghost {
+  background: var(--ios-fill-2);
+  color: var(--ios-blue);
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.ios-btn-danger {
+  background: rgba(255,59,48,0.12);
+  color: var(--ios-red);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.ios-btn-admin {
+  background: var(--ios-fill-2);
+  color: var(--ios-blue);
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ios-btn-admin-badge {
+  background: rgba(255,149,0,0.12);
+  color: var(--ios-orange);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ios-btn-logout {
+  background: rgba(255,59,48,0.12);
+  color: var(--ios-red);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.ios-btn-logout:active { opacity: 0.7; }
+
+/* === CARDS === */
+.ios-card {
+  background: var(--ios-surface);
+  border-radius: var(--ios-radius-lg);
+  box-shadow: var(--ios-shadow);
+  overflow: hidden;
+}
+
+.ios-card-section {
+  padding: 16px 18px;
+}
+
+.ios-card-divider {
+  border: none;
+  border-top: 1px solid var(--ios-separator);
+  margin: 0 18px;
+}
+
+/* === LABELS & TEXT === */
+.ios-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ios-label-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
+
+.ios-body-lg {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ios-label);
+  letter-spacing: -0.3px;
+}
+
+.ios-body {
+  font-size: 15px;
+  color: var(--ios-label);
+}
+
+.ios-caption {
+  font-size: 13px;
+  color: var(--ios-label-3);
+}
+
+/* === FORM INPUTS === */
+.ios-input {
+  width: 100%;
+  background: var(--ios-fill-2);
+  border: 1.5px solid transparent;
+  border-radius: var(--ios-radius);
+  padding: 13px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ios-label);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  -webkit-appearance: none;
+}
+
+.ios-input::placeholder {
+  color: var(--ios-gray-2);
+}
+
+.ios-input:focus {
+  border-color: var(--ios-blue);
+  background: #fff;
+}
+
+/* === STATUS PILLS === */
+.ios-pill-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(52,199,89,0.14);
+  color: var(--ios-green-dark);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ios-pill-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,59,48,0.12);
+  color: var(--ios-red);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* === GPS STATUS ROW === */
+.ios-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+}
+
+.ios-status-row + .ios-status-row {
+  border-top: 1px solid var(--ios-separator);
+}
+
+/* === CAMERA === */
+.ios-camera-wrap {
+  border-radius: var(--ios-radius-lg);
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4/3;
+  position: relative;
+  box-shadow: var(--ios-shadow);
+}
+
+/* === TABS (segmented control style) === */
+.ios-segmented {
+  display: flex;
+  background: var(--ios-fill-2);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.ios-segmented-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ios-label-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ios-segmented-btn.active {
+  background: var(--ios-surface);
+  color: var(--ios-label);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* === MODAL === */
+.ios-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ios-modal {
+  background: var(--ios-surface);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 540px;
+  padding: 24px 24px 40px;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.ios-modal-handle {
+  width: 36px;
+  height: 5px;
+  background: var(--ios-gray-4);
+  border-radius: 3px;
+  margin: 0 auto 20px;
+}
+
+/* === MAIN LAYOUT === */
+.ios-main {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+/* === TABLE === */
+.ios-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ios-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ios-label-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--ios-gray-6);
+  border-bottom: 1px solid var(--ios-separator);
+}
+
+.ios-table td {
+  padding: 11px 14px;
+  color: var(--ios-label);
+  border-bottom: 1px solid var(--ios-separator);
+  vertical-align: middle;
+}
+
+.ios-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ios-table tr:hover td {
+  background: var(--ios-gray-6);
+}
+
+/* === SUCCESS STATE === */
+.ios-success-icon {
+  width: 72px;
+  height: 72px;
+  background: rgba(52,199,89,0.14);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  color: var(--ios-green);
+}
+
+/* === DISTANCE BADGE === */
+.ios-distance-badge {
+  background: var(--ios-fill-2);
+  color: var(--ios-label-3);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Small screen tweaks */
+@media (max-width: 400px) {
+  .ios-navbar-inner { padding: 10px 14px; }
+  .ios-main { padding: 14px 10px 48px; }
+}
