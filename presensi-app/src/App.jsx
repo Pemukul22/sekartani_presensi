@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapPin, Camera, RefreshCw, CheckCircle2, XCircle, Shield,
   Settings, LogOut, Download, Trash2, Key, HelpCircle, UserCheck,
-  ChevronRight
+  Copy, CheckCheck
 } from 'lucide-react';
 import logoImg from './assets/logo.jpeg';
 
@@ -24,9 +24,25 @@ export default function App() {
   const [pinChangeSuccess, setPinChangeSuccess] = useState('');
 
   const [targetLocation, setTargetLocation] = useState(() => {
+    // Prioritaskan URL params (agar sync antar HP via link)
+    const params = new URLSearchParams(window.location.search);
+    const urlLat = parseFloat(params.get('lat'));
+    const urlLng = parseFloat(params.get('lng'));
+    const urlRadius = parseInt(params.get('radius'));
+    const urlName = params.get('name');
+    if (!isNaN(urlLat) && !isNaN(urlLng)) {
+      return {
+        name: urlName ? decodeURIComponent(urlName) : DEFAULT_TARGET_LOCATION.name,
+        lat: urlLat,
+        lng: urlLng,
+        radius: !isNaN(urlRadius) ? urlRadius : DEFAULT_TARGET_LOCATION.radius,
+      };
+    }
     const saved = localStorage.getItem('presensi_target_location');
     return saved ? JSON.parse(saved) : DEFAULT_TARGET_LOCATION;
   });
+
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const [activeTab, setActiveTab] = useState('logs');
 
@@ -125,9 +141,8 @@ export default function App() {
     if (!isAdmin && !capturedPhoto) {
       const timer = setTimeout(() => { startCamera(); }, 100);
       return () => { clearTimeout(timer); stopCamera(); };
-    } else {
-      stopCamera();
     }
+    return () => { stopCamera(); };
   }, [isAdmin, capturedPhoto, startCamera, stopCamera]);
 
   const captureSnapshot = () => {
@@ -169,11 +184,43 @@ export default function App() {
     }
   };
 
+  const generateShareLink = (loc = targetLocation) => {
+    const base = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams({
+      lat: loc.lat,
+      lng: loc.lng,
+      radius: loc.radius,
+      name: encodeURIComponent(loc.name),
+    });
+    return `${base}?${params.toString()}`;
+  };
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(generateShareLink());
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    } catch {
+      // fallback
+      const el = document.createElement('textarea');
+      el.value = generateShareLink();
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    }
+  };
+
   const handleSaveTargetLocation = (e) => {
     e.preventDefault();
     localStorage.setItem('presensi_target_location', JSON.stringify(targetLocation));
+    // Update URL agar link langsung bisa disalin
+    const newUrl = generateShareLink(targetLocation);
+    window.history.replaceState(null, '', newUrl);
     fetchCurrentLocation();
-    alert('Lokasi target presensi berhasil diperbarui!');
+    alert('Lokasi target presensi berhasil diperbarui! Gunakan tombol "Salin Link" untuk bagikan ke peserta.');
   };
 
   const setCurrentAsTarget = () => {
@@ -684,6 +731,32 @@ export default function App() {
                           style={{ flex: 1, justifyContent: 'center' }}
                         >
                           Simpan
+                        </button>
+                      </div>
+
+                      {/* Tombol Salin Link */}
+                      <div style={{ paddingTop: 4 }}>
+                        <div style={{ fontSize: 12, color: 'var(--ios-label-3)', fontWeight: 500, marginBottom: 8 }}>
+                          Bagikan link ini ke peserta agar koordinat otomatis sama:
+                        </div>
+                        <div style={{
+                          background: 'var(--ios-gray-6)', borderRadius: 10,
+                          padding: '10px 12px', fontSize: 11,
+                          color: 'var(--ios-blue)', fontFamily: 'monospace',
+                          wordBreak: 'break-all', marginBottom: 10,
+                          border: '1px solid var(--ios-separator)'
+                        }}>
+                          {generateShareLink()}
+                        </div>
+                        <button
+                          type="button"
+                          id="btn-salin-link"
+                          onClick={copyShareLink}
+                          className={`ios-btn ${copySuccess ? 'ios-btn-success' : 'ios-btn-primary'}`}
+                          style={{ width: '100%', justifyContent: 'center' }}
+                        >
+                          {copySuccess ? <CheckCheck size={14} /> : <Copy size={14} />}
+                          {copySuccess ? 'Link Tersalin!' : 'Salin Link Presensi'}
                         </button>
                       </div>
                     </div>
