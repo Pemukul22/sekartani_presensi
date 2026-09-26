@@ -10,10 +10,10 @@ import logoImg from './assets/logo.jpeg'; // Pastikan logo.jpeg ada di folder sr
 
 // Inisialisasi Firebase menggunakan Environment Variables dari Vite/Vercel
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  apiKey: "AIzaSyC76Ec2SuBZ5UoDnv_NSeE0MHF0DyABc1E",
+  authDomain: "presensi-sekar-tani.firebaseapp.com",
+  databaseURL: "https://presensi-sekar-tani-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "presensi-sekar-tani",
 };
 
 const app = initializeApp(firebaseConfig);
