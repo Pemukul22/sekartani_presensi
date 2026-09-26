@@ -362,7 +362,7 @@ export default function App() {
                   style={{ width: '100%', justifyContent: 'center', fontSize: 16 }}
                   onClick={() => setSubmitSuccess(false)}
                 >
-                  Absen Lagi
+                  Kembali
                 </button>
               </div>
             ) : (
@@ -873,7 +873,7 @@ export default function App() {
                 id="input-pin-admin"
                 type="password"
                 required
-                placeholder="PIN Default: admin123"
+                placeholder="Akses Masuk Izin Mirza"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 className="ios-input"
