@@ -4,7 +4,20 @@ import {
   Settings, LogOut, Download, Trash2, Key, HelpCircle, UserCheck,
   Copy, CheckCheck
 } from 'lucide-react';
-import logoImg from './assets/logo.jpeg';
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, onValue, set, push, remove } from 'firebase/database';
+import logoImg from './assets/logo.jpeg'; // Pastikan logo.jpeg ada di folder src/assets/
+
+// Inisialisasi Firebase menggunakan Environment Variables dari Vite/Vercel
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 const DEFAULT_TARGET_LOCATION = {
   name: 'Sawah Sekar Tani',
@@ -23,27 +36,9 @@ export default function App() {
   const [newPin, setNewPin] = useState('');
   const [pinChangeSuccess, setPinChangeSuccess] = useState('');
 
-  const [targetLocation, setTargetLocation] = useState(() => {
-    // Prioritaskan URL params (agar sync antar HP via link)
-    const params = new URLSearchParams(window.location.search);
-    const urlLat = parseFloat(params.get('lat'));
-    const urlLng = parseFloat(params.get('lng'));
-    const urlRadius = parseInt(params.get('radius'));
-    const urlName = params.get('name');
-    if (!isNaN(urlLat) && !isNaN(urlLng)) {
-      return {
-        name: urlName ? decodeURIComponent(urlName) : DEFAULT_TARGET_LOCATION.name,
-        lat: urlLat,
-        lng: urlLng,
-        radius: !isNaN(urlRadius) ? urlRadius : DEFAULT_TARGET_LOCATION.radius,
-      };
-    }
-    const saved = localStorage.getItem('presensi_target_location');
-    return saved ? JSON.parse(saved) : DEFAULT_TARGET_LOCATION;
-  });
-
+  // Target Lokasi disinkronkan langsung dari Firebase
+  const [targetLocation, setTargetLocation] = useState(DEFAULT_TARGET_LOCATION);
   const [copySuccess, setCopySuccess] = useState(false);
-
   const [activeTab, setActiveTab] = useState('logs');
 
   const [fullName, setFullName] = useState('');
@@ -57,17 +52,44 @@ export default function App() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
 
-  const [attendanceLogs, setAttendanceLogs] = useState(() => {
-    const saved = localStorage.getItem('presensi_logs');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  // Log Presensi disinkronkan langsung dari Firebase
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [searchLog, setSearchLog] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Listener Realtime Database untuk Lokasi Target
+  useEffect(() => {
+    const targetRef = ref(db, 'settings/targetLocation');
+    const unsubscribe = onValue(targetRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setTargetLocation(snapshot.val());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listener Realtime Database untuk Log Kehadiran
+  useEffect(() => {
+    const logsRef = ref(db, 'attendanceLogs');
+    const unsubscribe = onValue(logsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const formattedLogs = Object.keys(data).map(key => ({
+          firebaseKey: key,
+          ...data[key]
+        })).sort((a, b) => b.id - a.id);
+        setAttendanceLogs(formattedLogs);
+      } else {
+        setAttendanceLogs([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -184,15 +206,9 @@ export default function App() {
     }
   };
 
-  const generateShareLink = (loc = targetLocation) => {
-    const base = window.location.origin + window.location.pathname;
-    const params = new URLSearchParams({
-      lat: loc.lat,
-      lng: loc.lng,
-      radius: loc.radius,
-      name: encodeURIComponent(loc.name),
-    });
-    return `${base}?${params.toString()}`;
+  const generateShareLink = () => {
+    // URL tidak lagi memerlukan parameter karena tersinkronisasi server
+    return window.location.origin + window.location.pathname;
   };
 
   const copyShareLink = async () => {
@@ -201,7 +217,6 @@ export default function App() {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
     } catch {
-      // fallback
       const el = document.createElement('textarea');
       el.value = generateShareLink();
       document.body.appendChild(el);
@@ -215,12 +230,13 @@ export default function App() {
 
   const handleSaveTargetLocation = (e) => {
     e.preventDefault();
-    localStorage.setItem('presensi_target_location', JSON.stringify(targetLocation));
-    // Update URL agar link langsung bisa disalin
-    const newUrl = generateShareLink(targetLocation);
-    window.history.replaceState(null, '', newUrl);
-    fetchCurrentLocation();
-    alert('Lokasi target presensi berhasil diperbarui! Gunakan tombol "Salin Link" untuk bagikan ke peserta.');
+    // Simpan ke Firebase
+    set(ref(db, 'settings/targetLocation'), targetLocation)
+      .then(() => {
+        fetchCurrentLocation();
+        alert('Lokasi target presensi berhasil diperbarui ke semua perangkat!');
+      })
+      .catch((error) => alert('Gagal menyimpan koordinat: ' + error.message));
   };
 
   const setCurrentAsTarget = () => {
@@ -251,19 +267,21 @@ export default function App() {
       photo: capturedPhoto,
     };
 
-    const updatedLogs = [newRecord, ...attendanceLogs];
-    setAttendanceLogs(updatedLogs);
-    localStorage.setItem('presensi_logs', JSON.stringify(updatedLogs));
-    setSubmitSuccess(true);
-    setFullName('');
-    setCapturedPhoto(null);
+    // Kirim data presensi ke Firebase
+    push(ref(db, 'attendanceLogs'), newRecord)
+      .then(() => {
+        setSubmitSuccess(true);
+        setFullName('');
+        setCapturedPhoto(null);
+      })
+      .catch((error) => alert('Gagal mengirim presensi: ' + error.message));
   };
 
-  const deleteLog = (id) => {
+  const deleteLog = (firebaseKey) => {
     if (window.confirm('Hapus catatan presensi ini?')) {
-      const updated = attendanceLogs.filter((log) => log.id !== id);
-      setAttendanceLogs(updated);
-      localStorage.setItem('presensi_logs', JSON.stringify(updated));
+      // Hapus data spesifik dari Firebase
+      remove(ref(db, `attendanceLogs/${firebaseKey}`))
+        .catch((error) => alert('Gagal menghapus log: ' + error.message));
     }
   };
 
@@ -290,7 +308,6 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ios-bg)' }}>
-
       {/* ===== iOS NAVBAR ===== */}
       <header className="ios-navbar">
         <div className="ios-navbar-inner">
@@ -331,7 +348,6 @@ export default function App() {
           /* ==================== USER INTERFACE ==================== */
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
             {submitSuccess ? (
-              /* Success State */
               <div className="ios-card" style={{ padding: '40px 24px', textAlign: 'center' }}>
                 <div className="ios-success-icon" style={{ marginBottom: 18 }}>
                   <CheckCircle2 size={36} />
@@ -351,7 +367,6 @@ export default function App() {
               </div>
             ) : (
               <form onSubmit={handleSubmitAttendance} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
                 {/* GPS Status Card */}
                 <div>
                   <div className="ios-section-label">Status Lokasi GPS</div>
@@ -521,8 +536,6 @@ export default function App() {
         ) : (
           /* ==================== ADMIN INTERFACE ==================== */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* Segmented Control Tabs */}
             <div className="ios-segmented">
               <button
                 id="tab-logs"
@@ -553,11 +566,10 @@ export default function App() {
             {/* TAB 1: LOGS */}
             {activeTab === 'logs' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                   <div>
                     <div className="ios-body-lg">Laporan Kehadiran</div>
-                    <div className="ios-caption" style={{ marginTop: 2 }}>Total: {attendanceLogs.length} data</div>
+                    <div className="ios-caption" style={{ marginTop: 2 }}>Total: {attendanceLogs.length} data tersimpan di server</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input
@@ -601,7 +613,7 @@ export default function App() {
                         </tr>
                       ) : (
                         filteredLogs.map((log) => (
-                          <tr key={log.id}>
+                          <tr key={log.firebaseKey}>
                             <td>
                               {log.photo ? (
                                 <img
@@ -625,7 +637,7 @@ export default function App() {
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <button
-                                onClick={() => deleteLog(log.id)}
+                                onClick={() => deleteLog(log.firebaseKey)}
                                 style={{
                                   background: 'none', border: 'none',
                                   color: 'var(--ios-red)', cursor: 'pointer',
@@ -649,15 +661,13 @@ export default function App() {
             {/* TAB 2: SETTINGS */}
             {activeTab === 'settings' && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-
-                {/* Target GPS Form */}
                 <form onSubmit={handleSaveTargetLocation} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <div className="ios-section-label">Koordinat Presensi</div>
+                  <div className="ios-section-label">Sinkronisasi Koordinat (Server)</div>
                   <div className="ios-card">
                     <div className="ios-card-section" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, borderBottom: '1px solid var(--ios-separator)' }}>
                         <MapPin size={15} style={{ color: 'var(--ios-blue)' }} />
-                        <span style={{ fontWeight: 700, fontSize: 15 }}>Atur Lokasi Target</span>
+                        <span style={{ fontWeight: 700, fontSize: 15 }}>Atur Lokasi Target Server</span>
                       </div>
 
                       <div>
@@ -665,7 +675,7 @@ export default function App() {
                         <input
                           id="input-location-name"
                           type="text"
-                          value={targetLocation.name}
+                          value={targetLocation?.name || ''}
                           onChange={(e) => setTargetLocation({ ...targetLocation, name: e.target.value })}
                           className="ios-input"
                           style={{ fontSize: 14 }}
@@ -679,7 +689,7 @@ export default function App() {
                           <input
                             id="input-latitude"
                             type="number" step="any"
-                            value={targetLocation.lat}
+                            value={targetLocation?.lat || 0}
                             onChange={(e) => setTargetLocation({ ...targetLocation, lat: parseFloat(e.target.value) || 0 })}
                             className="ios-input"
                             style={{ fontSize: 13 }}
@@ -691,7 +701,7 @@ export default function App() {
                           <input
                             id="input-longitude"
                             type="number" step="any"
-                            value={targetLocation.lng}
+                            value={targetLocation?.lng || 0}
                             onChange={(e) => setTargetLocation({ ...targetLocation, lng: parseFloat(e.target.value) || 0 })}
                             className="ios-input"
                             style={{ fontSize: 13 }}
@@ -705,7 +715,7 @@ export default function App() {
                         <input
                           id="input-radius"
                           type="number"
-                          value={targetLocation.radius}
+                          value={targetLocation?.radius || 10}
                           onChange={(e) => setTargetLocation({ ...targetLocation, radius: parseInt(e.target.value) || 10 })}
                           className="ios-input"
                           style={{ fontSize: 14 }}
@@ -730,14 +740,13 @@ export default function App() {
                           className="ios-btn ios-btn-primary"
                           style={{ flex: 1, justifyContent: 'center' }}
                         >
-                          Simpan
+                          Push ke Server
                         </button>
                       </div>
 
-                      {/* Tombol Salin Link */}
                       <div style={{ paddingTop: 4 }}>
                         <div style={{ fontSize: 12, color: 'var(--ios-label-3)', fontWeight: 500, marginBottom: 8 }}>
-                          Bagikan link ini ke peserta agar koordinat otomatis sama:
+                          Link Utama Aplikasi (Tanpa Parameter):
                         </div>
                         <div style={{
                           background: 'var(--ios-gray-6)', borderRadius: 10,
@@ -763,9 +772,8 @@ export default function App() {
                   </div>
                 </form>
 
-                {/* PIN Form */}
                 <form onSubmit={handleChangePin} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <div className="ios-section-label">Ubah PIN Admin</div>
+                  <div className="ios-section-label">Ubah PIN Admin (Local)</div>
                   <div className="ios-card">
                     <div className="ios-card-section" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, borderBottom: '1px solid var(--ios-separator)' }}>
@@ -813,50 +821,17 @@ export default function App() {
             {/* TAB 3: PANDUAN */}
             {activeTab === 'deploy' && (
               <div>
-                <div className="ios-section-label">Panduan Deploy</div>
+                <div className="ios-section-label">Panduan Firebase Mode</div>
                 <div className="ios-card">
                   <div className="ios-card-section">
-                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-                      Menghubungkan App ke Vercel
-                    </div>
-                    <div className="ios-caption" style={{ marginBottom: 20 }}>
-                      SSL HTTPS otomatis aktif di Vercel — diperlukan agar GPS dan kamera berjalan di perangkat mobile.
-                    </div>
-
-                    {[
-                      {
-                        n: '1',
-                        title: 'Inisialisasi Project React Vite',
-                        code: `npm create vite@latest presensi-app -- --template react\ncd presensi-app\nnpm install lucide-react`
-                      },
-                      { n: '2', title: 'Simpan File Aplikasi', desc: 'Ganti seluruh isi file src/App.jsx dengan kode komponen ini.' },
-                      { n: '3', title: 'Upload ke GitHub', desc: 'Buat repository baru di GitHub dan push source code Anda.' },
-                      { n: '4', title: 'Deploy ke Vercel', desc: 'Buka vercel.com → Add New Project → Impor GitHub → Framework: Vite → Deploy.' },
-                    ].map((step) => (
-                      <div key={step.n} style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-                        <div style={{
-                          minWidth: 28, height: 28, borderRadius: '50%',
-                          background: 'var(--ios-blue)', color: '#fff',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 700, fontSize: 13, flexShrink: 0
-                        }}>
-                          {step.n}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{step.title}</div>
-                          {step.desc && <div className="ios-caption">{step.desc}</div>}
-                          {step.code && (
-                            <pre style={{
-                              background: 'var(--ios-gray-6)', borderRadius: 10, padding: '10px 14px',
-                              fontSize: 12, fontFamily: 'monospace', color: 'var(--ios-blue)',
-                              overflowX: 'auto', marginTop: 6
-                            }}>
-                              {step.code}
-                            </pre>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    <p style={{ fontSize: 14, color: 'var(--ios-label-2)', lineHeight: 1.5, marginBottom: 12 }}>
+                      Aplikasi kini telah terhubung ke **Firebase Realtime Database**.
+                    </p>
+                    <ul style={{ fontSize: 14, color: 'var(--ios-label-2)', lineHeight: 1.6, paddingLeft: 20 }}>
+                      <li>Setiap perubahan koordinat target yang Anda klik **"Push ke Server"** akan secara instan berubah di *smartphone* seluruh peserta yang sedang membuka web.</li>
+                      <li>Data presensi yang dikirim peserta tidak lagi tersimpan di perangkat lokal, melainkan masuk terpusat ke database server Anda.</li>
+                      <li>Link utama tidak perlu dibagikan ulang setiap kali Anda merubah titik kordinat. Cukup bagikan link domain utamanya saja.</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -898,7 +873,7 @@ export default function App() {
                 id="input-pin-admin"
                 type="password"
                 required
-                placeholder="(Akses Atas Izin Mirza)"
+                placeholder="PIN Default: admin123"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 className="ios-input"
@@ -962,7 +937,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Spinner keyframe */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
